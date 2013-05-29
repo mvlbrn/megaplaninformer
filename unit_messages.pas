@@ -1,7 +1,7 @@
 unit unit_messages;
 
 interface
-uses Classes, Generics.Collections;
+uses Classes, Generics.Collections, StdCtrls;
 
 type
   TMessageSubject = record
@@ -52,6 +52,8 @@ type
 implementation
 
 uses MSXML, xmldom, XMLIntf, msxmldom, XMLDoc, SysUtils;
+
+const b2s: array[boolean] of string = ('false', 'true');
 
 Constructor TMessageHistory.Create;
 begin
@@ -112,11 +114,14 @@ begin
   count := msg.Count;
   //Flag set to false. After parse, all elements withflag=false would be deleted
   for m in msg do
-    m.flag:=true;
+  begin
+    m.flag:=false;
+  end;
 
   xml := TXMLDocument.Create(nil);
   xml.LoadFromXML(xmlstr);
 
+  //If gon an errornous answer
   if xml.DocumentElement.ChildNodes['status'].ChildNodes['code'].text <> 'ok' then
   begin
     result:=-1;
@@ -129,7 +134,7 @@ begin
     row:=Find(StrToInt(node.ChildNodes['id'].text));
 
     //Acurate row selection
-    if row =-1 then
+    if row <0 then
     begin
       m := New(PMessage);
       m.flag := true;
@@ -159,22 +164,28 @@ begin
 
       msg.Add(m);
     end
-    else
+    else begin
       msg[row].flag := true;
+    end;
   end;
-
 
   //If we have new messages
   if count < msg.count then
-    result := msg.Count - count;
+    result := msg.Count - count
+  else
+    result := 0;
 
   //Delete messages, if they was not in parse list
   i:=0;
   while i<msg.Count do
-    if not msg[i].flag then
+  begin
+    if msg[i].flag=false then
+    begin
       msg.Delete(i)
+    end
     else
       inc(i);
+  end;
 end;
 
 function TMessageHistory.Count: integer;

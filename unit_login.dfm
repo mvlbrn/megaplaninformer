@@ -106,11 +106,19 @@ object login: Tlogin
     OnClick = btn_loginClick
   end
   object auto: TCheckBox
-    Left = 74
+    Left = 82
     Top = 201
     Width = 97
     Height = 17
     Caption = #1040#1074#1090#1086#1084#1072#1090#1080#1095#1077#1089#1082#1080
     TabOrder = 4
+    OnClick = autoClick
+  end
+  object timer: TTimer
+    Enabled = False
+    Interval = 5000
+    OnTimer = timerTimer
+    Left = 192
+    Top = 208
   end
 end

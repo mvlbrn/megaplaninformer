@@ -23,6 +23,7 @@ type
     timer: TTimer;
     popup_messages: TPopupMenu;
     MenuItem1: TMenuItem;
+    btn_refresh: TButton;
     procedure FormCreate(Sender: TObject);
     procedure messagesDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
@@ -38,6 +39,7 @@ type
     procedure MenuItem1Click(Sender: TObject);
 
     procedure debug(str:string);
+    procedure btn_refreshClick(Sender: TObject);
   private
     msg: TMessageHistory;
     function MegaplanSign(Method,ContentMD5,ContentType,Date,Host,Uri :string): string;
@@ -47,6 +49,8 @@ type
     function MegaplanPost(Uri: string; PostData: TIdMultiPartFormDataStream): string;
     function MegaplanParseNotifications(xmlstr :string): string;
     function messageExist(id: string): integer;
+    procedure offline();
+    procedure online();
 
     procedure MessagesRefresh;
   public
@@ -62,6 +66,7 @@ var
   megaplan_access_id  : string;
   megaplan_secret_key : string;
   timerenabled: boolean;
+  offline: boolean;
 
 implementation
 
@@ -82,10 +87,26 @@ end;
 procedure Tmain.messagesDblClick(Sender: TObject);
 var m:PMessage;
   url: string;
+    id:integer;
+    error: boolean;
+    data: TIdMultiPartFormDataStream;
 begin
+  debug('Cell='+messages.Cells[messages.Col, messages.Row]);
+  error:=false;
+  //Check if value is integer
+  try
+    id:=StrToInt(TStringGrid(Sender).Cells[TStringGrid(Sender).Col,TStringGrid(Sender).Row]);
+  except
+    error:=true;
+  end;
+  //If conversion was bad - exit
+
+  if (error) then
+    exit;
+
   with Sender as TStringGrid do
   begin
-    m := msg.msg[StrToInt(Cells[Col,Row])];
+    m := msg.msg[id];
     if m.subject.ttype = 'comment' then
       url := 'http://'+config_host+'/task/'+IntToStr(m.content.subject.id)+'/card/#c'+IntToStr(m.subject.id)
     else
@@ -101,7 +122,7 @@ var FRect: TRect;
     str  : string;
 begin
     with TStringGrid(Sender) do
-      if ACol=0  then
+      if (ACol=0) and (ARow < msg.Count)  then
       begin
         Canvas.Brush.Color := $00FFFFFF;
         Canvas.FillRect(Rect);
@@ -133,15 +154,28 @@ begin
 
         //Empty
         if (m.subject.ttype = 'empty') then
+        begin
          str := 'Сообщений нет';
+         RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
+         DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_NOPREFIX or DT_WORDBREAK);
+        end;
 
         //Comment
         if (m.subject.ttype = 'comment') then
-         str := m.time_created+', ' + m.content.subject.name + #13#10 +m.content.author.name + ' оставил(а) комментарий: ' + m.content.text;
+        begin
+          str := m.time_created+', ' + m.content.subject.name + #13#10 + m.content.author.name + ' оставил(а) комментарий: ' + m.content.text;
+          RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
+          DrawText(Canvas.Handle, str, -1, FRect, DT_NOPREFIX or DT_WORDBREAK);
+        end;
 
         //Task
         if (m.subject.ttype = 'task') then
+        begin
           str := m.time_created + ' ' +m.subject.name + #13#10 + m.content.roottext;
+          RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
+          DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_NOPREFIX or DT_WORDBREAK);
+        end;
+
 
 
         RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
@@ -187,6 +221,21 @@ begin
   end;
 end;
 
+procedure Tmain.offline;
+begin
+  tray.BalloonTitle:='Ошибка';
+  tray.BalloonHint:='При выполнении запроса произошла ошибка';
+    tray.BalloonTimeout := 10;
+    tray.BalloonFlags := bfError;
+    tray.ShowBalloonHint;
+  //
+end;
+
+procedure Tmain.online;
+begin
+  //
+end;
+
 procedure Tmain.timerTimer(Sender: TObject);
 var str:string;
 begin
@@ -195,6 +244,7 @@ end;
 
 procedure Tmain.trayDblClick(Sender: TObject);
 begin
+  tray.BalloonTimeout := 0;
   main.Visible := True;
   main.BringToFront;
   BringWindowToTop(Application.Handle);
@@ -238,13 +288,28 @@ end;
 
 procedure Tmain.MenuItem1Click(Sender: TObject);
 var m: PMessage;
+    id:integer;
+    error: boolean;
     data: TIdMultiPartFormDataStream;
 begin
-  m := msg.msg[StrToInt(messages.Cells[messages.Col, messages.Row])];
+  debug('Cell='+messages.Cells[messages.Col, messages.Row]);
+  error:=false;
+  //Check if value is integer
+  try
+    id:=StrToInt(messages.Cells[messages.Col, messages.Row]);
+  except
+    error:=true;
+  end;
+  //If conversion was bad - exit
+
+  if (error) then
+    exit;
+  m := msg.msg[id];
 
   //Parameters
+  debug('id='+inttostr(m.id));
   data := TIdMultiPartFormDataStream.Create();
-  data.AddFormField('Ids',IntToStr(m.id));
+  data.AddFormField('Ids[0]',IntToStr(m.id));
   MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
   MessagesRefresh;
 end;
@@ -266,12 +331,13 @@ begin
   try
     response:=http.Get('https://'+config_host+uri);
   except
-    on E:Exception do
-    begin
-      MessageBox(Handle, PWideChar(E.Message), 'Ошибка загрузки', mb_OK);
-    end;
+    offline;
   end;
   MegaplanGet:=response;
+  if (length(response)>0) then
+    online;
+
+  debug('got: '+response);
 end;
 
 procedure RemoveRowStringGrid(var StringGrid: TStringGrid; Which: integer);
@@ -291,7 +357,6 @@ var i      : integer;
   newcount : integer;
   m        : PMessage;
 begin
-
   newcount := msg.Parse(xmlstr);
 
   if newcount<0 then
@@ -301,27 +366,26 @@ begin
   end;
 
   row:=0;
-  messages.Enabled:=false;
   messages.RowCount := 1;
   messages.Cells[0,0] := 'Сообщений нет';
 
   for i := 0 to msg.count-1 do
-  begin
-    m := msg.msg[i];
-    messages.RowCount := row+1;
-    messages.Cells[0, row] := IntToStr(i);
-    inc(row);
-  end;
+    begin
+      m := msg.msg[i];
+      messages.RowCount := row+1;
+      messages.Cells[0, row] := IntToStr(i);
+      inc(row);
+    end;
 
   if newcount >0  then
   begin
     tray.BalloonTitle := 'Ух ты!';
     tray.BalloonHint  := 'Новые сообщения: ' + IntToStr(newcount);
-    tray.BalloonTimeout := 10;
+    tray.BalloonTimeout := 100;
+    tray.BalloonFlags := bfInfo;
     tray.ShowBalloonHint;
   end;
-  messages.Enabled:=true;
-  messages.Repaint;
+  messages.Update;
 end;
 
 function Tmain.MegaplanPost(Uri: string; PostData: TIdMultiPartFormDataStream): string;
@@ -344,14 +408,25 @@ begin
   http.Request.CustomHeaders.AddValue('Accept', 'application/json');
   http.Request.CustomHeaders.AddValue('X-Authorization', megaplan_access_id+':'+sign);
   http.Request.CustomHeaders.AddValue('Content-Type', 'application/x-www-form-urlencoded');
-  //http.Request.CustomHeaders.AddValue('PostData', PostData);
   try
-    response:=http.Post('https://'+config_host+uri, postdata);
+    try
+      response:=http.Post('https://'+config_host+uri, postdata);
+    except
+      offline;
+    end;
   finally
     http.Free;
     http_io.Free;
   end;
+  if (length(response)>0) then
+    online;
+
   debug(response);
+end;
+
+procedure Tmain.btn_refreshClick(Sender: TObject);
+begin
+  MessagesRefresh;
 end;
 
 procedure Tmain.debug(str: string);
@@ -359,7 +434,9 @@ var sl:TStringList;
     s:string;
     i:integer;
 begin
-  //log.lines.Add(str);
+{$IFDEF DEBUG}
+  log.lines.Add(str);
+{$ENDIF}
 end;
 
 procedure Tmain.Dsjl1Click(Sender: TObject);
@@ -375,8 +452,11 @@ end;
 
 procedure Tmain.FormCreate(Sender: TObject);
 begin
+{$IFNDEF DEBUG}
   Width := messages.Width + 6;
   Height := messages.Height +6;
+{$ENDIF}
+
   timerenabled := false;
   messages.ColWidths[0]:=messages.Width-4;
   msg := TMessageHistory.Create;

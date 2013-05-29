@@ -5,7 +5,7 @@ object main: Tmain
   BorderStyle = bsToolWindow
   Caption = #1052#1077#1075#1072#1080#1085#1092#1086#1088#1084#1077#1088
   ClientHeight = 636
-  ClientWidth = 715
+  ClientWidth = 571
   Color = clBtnFace
   DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
@@ -22,9 +22,9 @@ object main: Tmain
   TextHeight = 13
   object log: TMemo
     Left = 1
-    Top = 235
+    Top = 267
     Width = 568
-    Height = 318
+    Height = 366
     ScrollBars = ssVertical
     TabOrder = 0
   end
@@ -47,6 +47,15 @@ object main: Tmain
     OnDrawCell = messagesDrawCell
     OnKeyPress = messagesKeyPress
     OnMouseDown = messagesMouseDown
+  end
+  object btn_refresh: TButton
+    Left = 1
+    Top = 236
+    Width = 75
+    Height = 25
+    Caption = 'btn_refresh'
+    TabOrder = 2
+    OnClick = btn_refreshClick
   end
   object http: TIdHTTP
     IOHandler = ssl
@@ -89,7 +98,7 @@ object main: Tmain
     DOMVendorDesc = 'MSXML'
   end
   object tray: TTrayIcon
-    BalloonFlags = bfInfo
+    BalloonFlags = bfError
     Icon.Data = {
       0000010001001010000001002000680400001600000028000000100000002000
       0000010020000000000000040000000000000000000000000000000000000000

@@ -14,9 +14,12 @@ type
     btn_login: TButton;
     Shape1: TShape;
     auto: TCheckBox;
+    timer: TTimer;
     procedure btn_loginClick(Sender: TObject);
     procedure edit_hostKeyPress(Sender: TObject; var Key: Char);
     procedure FormCreate(Sender: TObject);
+    procedure autoClick(Sender: TObject);
+    procedure timerTimer(Sender: TObject);
   private
     { Private declarations }
   public
@@ -30,9 +33,16 @@ implementation
 uses unit_main, unit_utils;
 {$R *.dfm}
 
+procedure Tlogin.autoClick(Sender: TObject);
+begin
+  if not TCheckBox(Sender).Checked then
+    timer.Enabled := false;
+end;
+
 procedure Tlogin.btn_loginClick(Sender: TObject);
 var response:string;
 begin
+  timer.Enabled := false;
   enabled := false;
   config_host:=edit_host.Text;
   config_username := edit_user.Text;
@@ -42,8 +52,17 @@ begin
   regWriteString('user', config_username);
   regWriteString('pass', config_userpassword);
 
-  response:=main.http.Get('https://'+config_host+'/BumsCommonApiV01/User/authorize.xml?Login='+config_username+'&Password='+md5(config_userpassword));
-  main.xml.LoadFromXML(response);
+  try
+    try
+      response:=main.http.Get('https://'+config_host+'/BumsCommonApiV01/User/authorize.xml?Login='+config_username+'&Password='+md5(config_userpassword));
+    except
+      On e: Exception do
+        response:='<?xml version="1.0" encoding="utf-8"?><response><status><code>fail</code><message>Ошибка при запросе: '+E.Message+'</message></status><data/></response>';
+    end;
+  finally
+    main.xml.LoadFromXML(response);
+  end;
+
   if main.xml.DocumentElement.ChildNodes['status'].ChildNodes['code'].text = 'ok' then
   begin
     main.log.Lines.Add('Успешно вошли в систему');
@@ -83,6 +102,12 @@ begin
   edit_host.Text := regReadString('host');
   edit_user.Text := regReadString('user');
   edit_pass.Text := regReadString('pass');
+  timer.Enabled := auto.Checked;
+end;
+
+procedure Tlogin.timerTimer(Sender: TObject);
+begin
+  btn_login.Click;
 end;
 
 end.
