@@ -24,6 +24,9 @@ type
     popup_messages: TPopupMenu;
     MenuItem1: TMenuItem;
     btn_refresh: TButton;
+    N1: TMenuItem;
+    autoopen: TMenuItem;
+    debug_results: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure messagesDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
@@ -40,15 +43,18 @@ type
 
     procedure debug(str:string);
     procedure btn_refreshClick(Sender: TObject);
+    procedure N1Click(Sender: TObject);
+    procedure autoopenClick(Sender: TObject);
   private
     msg: TMessageHistory;
     function MegaplanSign(Method,ContentMD5,ContentType,Date,Host,Uri :string): string;
-    function MegaplanSignTest(Method,ContentMD5,ContentType,Date,Host,Uri :string): string;
-
     function MegaplanGet(Uri :string): string;
     function MegaplanPost(Uri: string; PostData: TIdMultiPartFormDataStream): string;
     function MegaplanParseNotifications(xmlstr :string): string;
     function messageExist(id: string): integer;
+    procedure mainshow();
+    procedure relocate();
+    procedure resize();
     procedure offline();
     procedure online();
 
@@ -66,7 +72,7 @@ var
   megaplan_access_id  : string;
   megaplan_secret_key : string;
   timerenabled: boolean;
-  offline: boolean;
+  offline, autopopup: boolean;
 
 implementation
 
@@ -156,7 +162,7 @@ begin
         if (m.subject.ttype = 'empty') then
         begin
          str := 'Сообщений нет';
-         RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
+         //RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
          DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_NOPREFIX or DT_WORDBREAK);
         end;
 
@@ -164,7 +170,7 @@ begin
         if (m.subject.ttype = 'comment') then
         begin
           str := m.time_created+', ' + m.content.subject.name + #13#10 + m.content.author.name + ' оставил(а) комментарий: ' + m.content.text;
-          RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
+          //RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
           DrawText(Canvas.Handle, str, -1, FRect, DT_NOPREFIX or DT_WORDBREAK);
         end;
 
@@ -172,14 +178,9 @@ begin
         if (m.subject.ttype = 'task') then
         begin
           str := m.time_created + ' ' +m.subject.name + #13#10 + m.content.roottext;
-          RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
+          //RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
           DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_NOPREFIX or DT_WORDBREAK);
         end;
-
-
-
-        RowHeights[ARow] := DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_WORDBREAK or DT_CALCRECT)+4;
-        DrawText(Canvas.Handle, str+#13#10, -1, FRect, DT_NOPREFIX or DT_WORDBREAK);
       end;
 end;
 
@@ -221,19 +222,70 @@ begin
   end;
 end;
 
+procedure Tmain.N1Click(Sender: TObject);
+var m: PMessage;
+    i:integer;
+    ids: string;
+    error: boolean;
+    data: TIdMultiPartFormDataStream;
+begin
+  if MessageDlg('Очистить все сообщения?', mtConfirmation , mbOKCancel, 0) <> mrOk then
+  exit;
+
+  //Crete post array
+  data := TIdMultiPartFormDataStream.Create();
+
+  for i:=0 to msg.count-1 do
+    data.AddFormField('Ids['+inttostr(i)+']',IntToStr(msg.msg[i].id));
+
+  //Parameters
+  MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
+  data.free;
+  MessagesRefresh;
+end;
+
 procedure Tmain.offline;
 begin
+  {$IFDEF DEBUG}
   tray.BalloonTitle:='Ошибка';
   tray.BalloonHint:='При выполнении запроса произошла ошибка';
-    tray.BalloonTimeout := 10;
-    tray.BalloonFlags := bfError;
-    tray.ShowBalloonHint;
+  tray.BalloonTimeout := 10;
+  tray.BalloonFlags := bfError;
+  tray.ShowBalloonHint;
+  {$ENDIF}
   //
 end;
 
 procedure Tmain.online;
 begin
   //
+end;
+
+procedure Tmain.relocate;
+begin
+  Left:=screen.WorkAreaWidth-width;
+  Top:=screen.WorkAreaHeight-Height;
+end;
+
+procedure Tmain.resize;
+var count: integer;
+    i, height : integer;
+begin
+  count := messages.RowCount;
+  if (count>5) then
+    count := 5;
+
+  height := 0;
+  for i := 0 to count-1 do
+  begin
+    height := height + messages.RowHeights[i]+3;
+  end;
+  messages.Height := height;
+
+  {$IFNDEF DEBUG}
+  main.Width := messages.Width + 6;
+  main.Height:=GetSystemMetrics(SM_CYCAPTION)+ messages.top + messages.Height+4;
+  {$ENDIF}
 end;
 
 procedure Tmain.timerTimer(Sender: TObject);
@@ -265,24 +317,6 @@ begin
   finally
     Free;
   end;
-  debug('hash1='+bintostr(hash));
-  result:=TIdEncoderMIME.EncodeBytes(toBytes(bintostr(hash)));
-end;
-
-function Tmain.MegaplanSignTest(Method,ContentMD5,ContentType,Date,Host,Uri:string): string;
-var str: string;
-  hash: TIdBytes;
-
-begin
-  str:=Method+#10+ContentMD5+#10+ContentType+#10+Host+Uri;
-  with TIdHMACSHA1.Create do
-  try
-    Key := toBytes(megaplan_secret_key);
-    hash := HashValue(toBytes(str));
-  finally
-    Free;
-  end;
-  debug('hash2='+bintostr(hash));
   result:=TIdEncoderMIME.EncodeBytes(toBytes(bintostr(hash)));
 end;
 
@@ -331,13 +365,17 @@ begin
   try
     response:=http.Get('https://'+config_host+uri);
   except
-    offline;
+    on e:exception do
+    begin
+      debug(e.message);
+      offline;
+    end;
   end;
   MegaplanGet:=response;
   if (length(response)>0) then
     online;
 
-  debug('got: '+response);
+    if debug_results.Checked then debug('got: '+response);
 end;
 
 procedure RemoveRowStringGrid(var StringGrid: TStringGrid; Which: integer);
@@ -381,10 +419,15 @@ begin
   begin
     tray.BalloonTitle := 'Ух ты!';
     tray.BalloonHint  := 'Новые сообщения: ' + IntToStr(newcount);
-    tray.BalloonTimeout := 100;
+    tray.BalloonTimeout := 3;
     tray.BalloonFlags := bfInfo;
     tray.ShowBalloonHint;
+
+    if (autopopup) then
+      mainshow;
   end;
+  resize;
+  relocate;
   messages.Update;
 end;
 
@@ -412,16 +455,26 @@ begin
     try
       response:=http.Post('https://'+config_host+uri, postdata);
     except
-      offline;
+      on e:exception do
+      begin
+        debug(e.message);
+        offline;
+      end;
     end;
   finally
-    http.Free;
-    http_io.Free;
+    if assigned(http) then http.Free;
+    if assigned(http_io) then http_io.Free;
   end;
   if (length(response)>0) then
     online;
 
-  debug(response);
+  if debug_results.Checked then debug(response);
+end;
+
+procedure Tmain.autoopenClick(Sender: TObject);
+begin
+  autopopup := TMenuItem(Sender).Checked;
+  regWriteBool('autopopup', TMenuItem(sender).Checked);
 end;
 
 procedure Tmain.btn_refreshClick(Sender: TObject);
@@ -446,29 +499,38 @@ end;
 
 procedure Tmain.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
+  {$IFNDEF DEBUG}
   CanClose:=False;
   main.hide;
+  {$endif}
 end;
 
 procedure Tmain.FormCreate(Sender: TObject);
 begin
-{$IFNDEF DEBUG}
-  Width := messages.Width + 6;
-  Height := messages.Height +6;
-{$ENDIF}
-
   timerenabled := false;
   messages.ColWidths[0]:=messages.Width-4;
   msg := TMessageHistory.Create;
 
-  Left:=screen.WorkAreaWidth-width;
-  Top:=screen.WorkAreaHeight-Height;
+  resize;
 end;
 
 procedure Tmain.FormShow(Sender: TObject);
 begin
+  resize;
   Left:=screen.WorkAreaWidth-width;
   Top:=screen.WorkAreaHeight-Height;
+end;
+
+procedure Tmain.mainshow;
+begin
+  resize;
+  main.Visible := True;
+  main.BringToFront;
+  BringWindowToTop(Application.Handle);
+  ShowWindow(Application.MainForm.Handle, SW_RESTORE);
+  SetForegroundWindow(Main.Handle);
+
+  relocate;
 end;
 
 end.

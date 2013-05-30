@@ -2,9 +2,9 @@ object main: Tmain
   Left = 0
   Top = 0
   BorderIcons = [biSystemMenu]
-  BorderStyle = bsToolWindow
+  BorderStyle = bsDialog
   Caption = #1052#1077#1075#1072#1080#1085#1092#1086#1088#1084#1077#1088
-  ClientHeight = 636
+  ClientHeight = 632
   ClientWidth = 571
   Color = clBtnFace
   DoubleBuffered = True
@@ -30,11 +30,12 @@ object main: Tmain
   end
   object messages: TStringGrid
     Left = 1
-    Top = 0
+    Top = 2
     Width = 568
     Height = 233
     ColCount = 1
     DefaultColWidth = 128
+    DefaultRowHeight = 40
     DoubleBuffered = True
     FixedCols = 0
     RowCount = 1
@@ -56,6 +57,14 @@ object main: Tmain
     Caption = 'btn_refresh'
     TabOrder = 2
     OnClick = btn_refreshClick
+  end
+  object debug_results: TCheckBox
+    Left = 472
+    Top = 244
+    Width = 97
+    Height = 17
+    Caption = 'Debug results'
+    TabOrder = 3
   end
   object http: TIdHTTP
     IOHandler = ssl
@@ -145,6 +154,11 @@ object main: Tmain
   object popup_tray: TPopupMenu
     Left = 472
     Top = 328
+    object autoopen: TMenuItem
+      AutoCheck = True
+      Caption = #1040#1074#1090#1086#1086#1090#1082#1088#1099#1090#1080#1077
+      OnClick = autoopenClick
+    end
     object Dsjl1: TMenuItem
       Caption = #1042#1099#1093#1086#1076
       OnClick = Dsjl1Click
@@ -162,6 +176,10 @@ object main: Tmain
     object MenuItem1: TMenuItem
       Caption = #1042' '#1087#1088#1086#1095#1080#1090#1072#1085#1085#1099#1077
       OnClick = MenuItem1Click
+    end
+    object N1: TMenuItem
+      Caption = #1055#1086#1084#1077#1090#1080#1090#1100' '#1074#1089#1077' '#1082#1072#1082' '#1087#1088#1086#1095#1080#1090#1072#1085#1085#1099#1077
+      OnClick = N1Click
     end
   end
 end

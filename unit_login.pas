@@ -37,6 +37,7 @@ procedure Tlogin.autoClick(Sender: TObject);
 begin
   if not TCheckBox(Sender).Checked then
     timer.Enabled := false;
+  regWriteBool('auto', TCheckBox(sender).Checked);
 end;
 
 procedure Tlogin.btn_loginClick(Sender: TObject);
@@ -51,6 +52,8 @@ begin
   regWriteString('host', config_host);
   regWriteString('user', config_username);
   regWriteString('pass', config_userpassword);
+  regWriteBool('auto', auto.Checked);
+  regWriteBool('autopopup', auto.Checked);
 
   try
     try
@@ -98,11 +101,13 @@ class function TLogin.Execute: boolean;
 
  procedure Tlogin.FormCreate(Sender: TObject);
 begin
-  auto.checked := regReadBool('auto', true);
+  auto.checked := regReadBool('auto', false);
+  autopopup := regReadBool('auto', true);
   edit_host.Text := regReadString('host');
   edit_user.Text := regReadString('user');
   edit_pass.Text := regReadString('pass');
   timer.Enabled := auto.Checked;
+  main.tray.PopupMenu.Items[0].Checked:=autopopup;
 end;
 
 procedure Tlogin.timerTimer(Sender: TObject);

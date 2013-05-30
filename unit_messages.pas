@@ -51,7 +51,7 @@ type
 
 implementation
 
-uses MSXML, xmldom, XMLIntf, msxmldom, XMLDoc, SysUtils;
+uses unit_main, MSXML, xmldom, XMLIntf, msxmldom, XMLDoc, SysUtils;
 
 const b2s: array[boolean] of string = ('false', 'true');
 
@@ -122,11 +122,14 @@ begin
   xml.LoadFromXML(xmlstr);
 
   //If gon an errornous answer
-  if xml.DocumentElement.ChildNodes['status'].ChildNodes['code'].text <> 'ok' then
-  begin
+  try
+    if xml.DocumentElement.ChildNodes['status'].ChildNodes['code'].text <> 'ok' then
+      result:=-1;
+  except
     result:=-1;
-    exit;
   end;
+  if (result<0) then
+    exit;
 
   for I := 0 to xml.DocumentElement.ChildNodes['data'].ChildNodes['notifications'].ChildNodes.Count - 1 do
   begin
@@ -136,33 +139,41 @@ begin
     //Acurate row selection
     if row <0 then
     begin
-      m := New(PMessage);
-      m.flag := true;
-      //notification
-      m.id   := StrToInt(node.ChildNodes['id'].text);
-      m.name := node.ChildNodes['name'].text;
-      m.time_created := node.ChildNodes['time_created'].text;
+        m := New(PMessage);
+        m.flag := true;
+        m.id := 0;
+        try
+          //notification
+          m.id   := StrToInt(node.ChildNodes['id'].text);
+          m.name := node.ChildNodes['name'].text;
+          m.time_created := node.ChildNodes['time_created'].text;
 
-      m.subject.id   := StrToInt(node.ChildNodes['subject'].ChildNodes['id'].text);
-      m.subject.name := node.ChildNodes['subject'].ChildNodes['name'].text;
-      m.subject.ttype := node.ChildNodes['subject'].ChildNodes['type'].text;
+          m.subject.id   := StrToInt(node.ChildNodes['subject'].ChildNodes['id'].text);
+          m.subject.name := node.ChildNodes['subject'].ChildNodes['name'].text;
+          m.subject.ttype := node.ChildNodes['subject'].ChildNodes['type'].text;
 
-      if (m.subject.ttype='comment') then
-      begin
-        m.content.subject.id   := StrToInt(node.ChildNodes['content'].ChildNodes['subject'].ChildNodes['id'].text);
-        m.content.subject.name := node.ChildNodes['content'].ChildNodes['subject'].ChildNodes['name'].text;
-        m.content.subject.ttype := node.ChildNodes['content'].ChildNodes['subject'].ChildNodes['type'].text;
+          if (m.subject.ttype='comment') then
+          begin
+            m.content.subject.id   := StrToInt(node.ChildNodes['content'].ChildNodes['subject'].ChildNodes['id'].text);
+            m.content.subject.name := node.ChildNodes['content'].ChildNodes['subject'].ChildNodes['name'].text;
+            m.content.subject.ttype := node.ChildNodes['content'].ChildNodes['subject'].ChildNodes['type'].text;
 
-        m.content.author.id   := StrToInt(node.ChildNodes['content'].ChildNodes['author'].ChildNodes['id'].text);
-        m.content.author.name := node.ChildNodes['content'].ChildNodes['author'].ChildNodes['name'].text;
+            m.content.author.id   := StrToInt(node.ChildNodes['content'].ChildNodes['author'].ChildNodes['id'].text);
+            m.content.author.name := node.ChildNodes['content'].ChildNodes['author'].ChildNodes['name'].text;
 
-        m.content.text := node.ChildNodes['content'].ChildNodes['text'].text;
-      end;
+            m.content.text := node.ChildNodes['content'].ChildNodes['text'].text;
+          end;
 
-      if (m.subject.ttype='task') then
-        m.content.roottext := node.ChildNodes['content'].text;
+          if (m.subject.ttype='task') then
+            m.content.roottext := node.ChildNodes['content'].text;
 
-      msg.Add(m);
+          if (m.subject.ttype='task') then
+            m.content.roottext := node.ChildNodes['content'].text;
+        except
+          on e:exception do
+            main.log.lines.add('error xml parse: '+e.Message);
+        end;
+        msg.Add(m);
     end
     else begin
       msg[row].flag := true;
@@ -185,6 +196,17 @@ begin
     end
     else
       inc(i);
+  end;
+end;
+
+function mystrtoint(id: integer; str:string; log: tmemo): longint;
+begin
+  try
+    result:=StrToInt(str);
+  except
+    on e:exception do
+      log.Lines.Add('mystrtoint: '+inttostr(id)+' :'+e.message);
+
   end;
 end;
 
