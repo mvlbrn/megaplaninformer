@@ -35,7 +35,7 @@ object main: Tmain
     Height = 233
     ColCount = 1
     DefaultColWidth = 128
-    DefaultRowHeight = 40
+    DefaultRowHeight = 60
     DoubleBuffered = True
     FixedCols = 0
     RowCount = 1

@@ -12,6 +12,7 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
+  Application.Title := 'Megainformer';
   Application.CreateForm(Tmain, main);
   if TLogin.Execute then
     Application.Run;
