@@ -22,9 +22,9 @@ object main: Tmain
   TextHeight = 13
   object log: TMemo
     Left = 1
-    Top = 267
+    Top = 391
     Width = 568
-    Height = 366
+    Height = 242
     ScrollBars = ssVertical
     TabOrder = 0
   end
@@ -32,7 +32,7 @@ object main: Tmain
     Left = 1
     Top = 2
     Width = 568
-    Height = 233
+    Height = 356
     ColCount = 1
     DefaultColWidth = 128
     DefaultRowHeight = 60
@@ -50,8 +50,8 @@ object main: Tmain
     OnMouseDown = messagesMouseDown
   end
   object btn_refresh: TButton
-    Left = 1
-    Top = 236
+    Left = 8
+    Top = 364
     Width = 75
     Height = 25
     Caption = 'btn_refresh'
@@ -60,7 +60,7 @@ object main: Tmain
   end
   object debug_results: TCheckBox
     Left = 472
-    Top = 244
+    Top = 368
     Width = 97
     Height = 17
     Caption = 'Debug results'
@@ -84,11 +84,11 @@ object main: Tmain
     HTTPOptions = [hoForceEncodeParams]
     CookieManager = cookie
     Left = 8
-    Top = 328
+    Top = 400
   end
   object cookie: TIdCookieManager
     Left = 48
-    Top = 328
+    Top = 400
   end
   object ssl: TIdSSLIOHandlerSocketOpenSSL
     MaxLineAction = maException
@@ -98,12 +98,12 @@ object main: Tmain
     SSLOptions.VerifyMode = []
     SSLOptions.VerifyDepth = 0
     Left = 88
-    Top = 328
+    Top = 400
   end
   object xml: TXMLDocument
     Options = [doNodeAutoCreate, doNodeAutoIndent, doAttrNull, doAutoPrefix, doNamespaceDecl]
     Left = 128
-    Top = 328
+    Top = 400
     DOMVendorDesc = 'MSXML'
   end
   object tray: TTrayIcon
@@ -149,11 +149,11 @@ object main: Tmain
     Visible = True
     OnDblClick = trayDblClick
     Left = 512
-    Top = 328
+    Top = 400
   end
   object popup_tray: TPopupMenu
     Left = 472
-    Top = 328
+    Top = 400
     object autoopen: TMenuItem
       AutoCheck = True
       Caption = #1040#1074#1090#1086#1086#1090#1082#1088#1099#1090#1080#1077
@@ -168,11 +168,11 @@ object main: Tmain
     Interval = 30000
     OnTimer = timerTimer
     Left = 432
-    Top = 328
+    Top = 400
   end
   object popup_messages: TPopupMenu
     Left = 344
-    Top = 328
+    Top = 400
     object MenuItem1: TMenuItem
       Caption = #1042' '#1087#1088#1086#1095#1080#1090#1072#1085#1085#1099#1077
       OnClick = MenuItem1Click
