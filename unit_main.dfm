@@ -152,7 +152,7 @@ object main: Tmain
     Top = 400
   end
   object popup_tray: TPopupMenu
-    Left = 472
+    Left = 464
     Top = 400
     object autoopen: TMenuItem
       AutoCheck = True
@@ -167,11 +167,11 @@ object main: Tmain
   object timer: TTimer
     Interval = 30000
     OnTimer = timerTimer
-    Left = 432
+    Left = 416
     Top = 400
   end
   object popup_messages: TPopupMenu
-    Left = 344
+    Left = 352
     Top = 400
     object MenuItem1: TMenuItem
       Caption = #1042' '#1087#1088#1086#1095#1080#1090#1072#1085#1085#1099#1077

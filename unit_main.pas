@@ -524,12 +524,13 @@ end;
 procedure Tmain.mainshow;
 begin
   resize;
+
+  ShowWindow(main.Handle, SW_SHOWNOACTIVATE);
   main.Visible := True;
   main.BringToFront;
-  BringWindowToTop(Application.Handle);
-  ShowWindow(Application.MainForm.Handle, SW_RESTORE);
-  SetForegroundWindow(Main.Handle);
-
+  //BringWindowToTop(Application.Handle);
+  //ShowWindow(Application.MainForm.Handle, SW_RESTORE);
+  //SetForegroundWindow(Main.Handle);
   relocate;
 end;
 
