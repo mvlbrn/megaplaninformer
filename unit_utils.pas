@@ -83,7 +83,7 @@ begin
   Result := '';
   with TIdHashMessageDigest5.Create do
   try
-    Result := LowerCase(HashStringAsHex(s, TEncoding.UTF8 ));
+    Result := LowerCase(HashStringAsHex(s));
     //AnsiLowerCase(AsHex(HashValue(s)));
   finally
     Free;

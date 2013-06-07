@@ -53,10 +53,10 @@ type
     function MegaplanParseNotifications(xmlstr :string): string;
     function messageExist(id: string): integer;
     procedure mainshow();
-    procedure relocate();
-    procedure resize();
-    procedure offline();
-    procedure online();
+    procedure _relocate();
+    procedure _resize();
+    procedure _offline();
+    procedure _online();
 
     procedure MessagesRefresh;
   public
@@ -77,7 +77,7 @@ var
 implementation
 
 uses IdHashMessageDigest, IdHeaderList, IdDateTimeStamp, MSXML, unit_utils, IdHMACSHA1, IdGlobal,
-  unit_login, ShellAPI;
+  unit_login, ShellAPI, System.Types, System.UITypes;
 
 {$R *.dfm}
 
@@ -95,8 +95,8 @@ var m:PMessage;
   url: string;
     id:integer;
     error: boolean;
-    data: TIdMultiPartFormDataStream;
 begin
+  id := -1;
   debug('Cell='+messages.Cells[messages.Col, messages.Row]);
   error:=false;
   //Check if value is integer
@@ -223,10 +223,8 @@ begin
 end;
 
 procedure Tmain.N1Click(Sender: TObject);
-var m: PMessage;
+var
     i:integer;
-    ids: string;
-    error: boolean;
     data: TIdMultiPartFormDataStream;
 begin
   if MessageDlg('Очистить все сообщения?', mtConfirmation , mbOKCancel, 0) <> mrOk then
@@ -244,7 +242,7 @@ begin
   MessagesRefresh;
 end;
 
-procedure Tmain.offline;
+procedure Tmain._offline;
 begin
   {$IFDEF DEBUG}
   tray.BalloonTitle:='Ошибка';
@@ -256,18 +254,18 @@ begin
   //
 end;
 
-procedure Tmain.online;
+procedure Tmain._online;
 begin
   //
 end;
 
-procedure Tmain.relocate;
+procedure Tmain._relocate;
 begin
   Left:=screen.WorkAreaWidth-width;
   Top:=screen.WorkAreaHeight-Height;
 end;
 
-procedure Tmain.resize;
+procedure Tmain._resize;
 var count: integer;
     i, height : integer;
 begin
@@ -289,7 +287,6 @@ begin
 end;
 
 procedure Tmain.timerTimer(Sender: TObject);
-var str:string;
 begin
   MessagesRefresh;
 end;
@@ -326,6 +323,7 @@ var m: PMessage;
     error: boolean;
     data: TIdMultiPartFormDataStream;
 begin
+  id := -1;
   debug('Cell='+messages.Cells[messages.Col, messages.Row]);
   error:=false;
   //Check if value is integer
@@ -352,7 +350,6 @@ function Tmain.MegaplanGet(Uri :string): string;
 var DateRFC: string;
     sign:string;
     response:string;
-    msg: string;
 begin
   daterfc:= RFC2822Date(Now(), false);
   sign:=MegaplanSign('GET', '', '', DateRFC, config_host, Uri);
@@ -368,12 +365,12 @@ begin
     on e:exception do
     begin
       debug(e.message);
-      offline;
+      _offline;
     end;
   end;
   MegaplanGet:=response;
   if (length(response)>0) then
-    online;
+    _online;
 
     if debug_results.Checked then debug('got: '+response);
 end;
@@ -393,7 +390,6 @@ function Tmain.MegaplanParseNotifications(xmlstr :string): string;
 var i      : integer;
   row      : integer;
   newcount : integer;
-  m        : PMessage;
 begin
   newcount := msg.Parse(xmlstr);
 
@@ -409,7 +405,6 @@ begin
 
   for i := 0 to msg.count-1 do
     begin
-      m := msg.msg[i];
       messages.RowCount := row+1;
       messages.Cells[0, row] := IntToStr(i);
       inc(row);
@@ -426,19 +421,17 @@ begin
     if (autopopup) then
       mainshow;
   end;
-  resize;
-  relocate;
+  _resize;
+  _relocate;
   messages.Update;
 end;
 
 function Tmain.MegaplanPost(Uri: string; PostData: TIdMultiPartFormDataStream): string;
 var
   DateRFC: string;
-  sign, response, p1, p2: string;
+  sign, response: string;
   http: TIdHTTP;
   http_io: TIdSSLIOHandlerSocketOpenSSL;
-  params,parameter: TStringArr;
-  i:integer;
 begin
   http_io := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
   http := TIdHTTP.Create(nil);
@@ -458,7 +451,7 @@ begin
       on e:exception do
       begin
         debug(e.message);
-        offline;
+        _offline;
       end;
     end;
   finally
@@ -466,7 +459,7 @@ begin
     if assigned(http_io) then http_io.Free;
   end;
   if (length(response)>0) then
-    online;
+    _online;
 
   if debug_results.Checked then debug(response);
 end;
@@ -483,9 +476,6 @@ begin
 end;
 
 procedure Tmain.debug(str: string);
-var sl:TStringList;
-    s:string;
-    i:integer;
 begin
 {$IFDEF DEBUG}
   log.lines.Add(str);
@@ -531,7 +521,7 @@ begin
   //BringWindowToTop(Application.Handle);
   //ShowWindow(Application.MainForm.Handle, SW_RESTORE);
   //SetForegroundWindow(Main.Handle);
-  relocate;
+  _relocate;
 end;
 
 end.
