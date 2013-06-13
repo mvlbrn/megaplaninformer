@@ -27,6 +27,7 @@ type
     N1: TMenuItem;
     autoopen: TMenuItem;
     debug_results: TCheckBox;
+    N2: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure messagesDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
@@ -45,6 +46,7 @@ type
     procedure btn_refreshClick(Sender: TObject);
     procedure N1Click(Sender: TObject);
     procedure autoopenClick(Sender: TObject);
+    procedure N2Click(Sender: TObject);
   private
     msg: TMessageHistory;
     function MegaplanSign(Method,ContentMD5,ContentType,Date,Host,Uri :string): string;
@@ -239,6 +241,11 @@ begin
   //Parameters
   MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
   data.free;
+  MessagesRefresh;
+end;
+
+procedure Tmain.N2Click(Sender: TObject);
+begin
   MessagesRefresh;
 end;
 

@@ -53,7 +53,6 @@ begin
   regWriteString('user', config_username);
   regWriteString('pass', config_userpassword);
   regWriteBool('auto', auto.Checked);
-  regWriteBool('autopopup', auto.Checked);
 
   try
     try
@@ -106,6 +105,7 @@ begin
   edit_host.Text := regReadString('host');
   edit_user.Text := regReadString('user');
   edit_pass.Text := regReadString('pass');
+  main.popup_tray.Items[1].Checked := regReadBool('autopopup', true);
   timer.Enabled := auto.Checked;
   main.tray.PopupMenu.Items[0].Checked:=autopopup;
 end;

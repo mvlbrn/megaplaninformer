@@ -154,6 +154,10 @@ object main: Tmain
   object popup_tray: TPopupMenu
     Left = 464
     Top = 400
+    object N2: TMenuItem
+      Caption = #1054#1073#1085#1086#1074#1080#1090#1100
+      OnClick = N2Click
+    end
     object autoopen: TMenuItem
       AutoCheck = True
       Caption = #1040#1074#1090#1086#1086#1090#1082#1088#1099#1090#1080#1077
