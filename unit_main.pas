@@ -50,6 +50,7 @@ type
   private
     msg: TMessageHistory;
     function MegaplanSign(Method,ContentMD5,ContentType,Date,Host,Uri :string): string;
+    function MegaplanSignDebug(Method,ContentMD5,ContentType,Date,Host,Uri:string): string;
     function MegaplanGet(Uri :string): string;
     function MegaplanPost(Uri: string; PostData: TIdMultiPartFormDataStream): string;
     function MegaplanParseNotifications(xmlstr :string): string;
@@ -324,6 +325,22 @@ begin
   result:=TIdEncoderMIME.EncodeBytes(toBytes(bintostr(hash)));
 end;
 
+function Tmain.MegaplanSignDebug(Method,ContentMD5,ContentType,Date,Host,Uri:string): string;
+var str: string;
+  hash: TIdBytes;
+
+begin
+  str:=Method+#10+ContentMD5+#10+ContentType+#10+''+#10+Host+Uri;
+  with TIdHMACSHA1.Create do
+  try
+    Key := toBytes(megaplan_secret_key);
+    hash := HashValue(toBytes(str));
+  finally
+    Free;
+  end;
+  result:=TIdEncoderMIME.EncodeBytes(toBytes(bintostr(hash)));
+end;
+
 procedure Tmain.MenuItem1Click(Sender: TObject);
 var m: PMessage;
     id:integer;
@@ -439,20 +456,35 @@ var
   sign, response: string;
   http: TIdHTTP;
   http_io: TIdSSLIOHandlerSocketOpenSSL;
+  post_sl :TStringList;
 begin
   http_io := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
   http := TIdHTTP.Create(nil);
   http.IOHandler := http_io;
 
-  daterfc:= RFC2822Date(Now(), false);
-  sign:=MegaplanSign('POST', '', 'application/x-www-form-urlencoded', DateRFC, config_host,Uri);
+  //daterfc:= RFC2822Date(Now(), false);
+  //sign:=MegaplanSignDebug('POST', '', 'application/x-www-form-urlencoded', DateRFC, config_host,Uri);
+
+  daterfc:= 'Wed, 24 Jul 2013 12:59:45 +0700';
+  sign:=MegaplanSignDebug('POST', '', 'application/x-www-form-urlencoded', DateRFC, config_host,Uri);
+
   http.Request.CustomHeaders.Clear;
   http.Request.CustomHeaders.AddValue('Date', daterfc);
   http.Request.CustomHeaders.AddValue('Accept', 'application/json');
   http.Request.CustomHeaders.AddValue('X-Authorization', megaplan_access_id+':'+sign);
   http.Request.CustomHeaders.AddValue('Content-Type', 'application/x-www-form-urlencoded');
+
   try
     try
+      log.Lines.Add('POST HEADERS:');
+      log.Lines.AddStrings(http.Request.CustomHeaders);
+      log.Lines.Add('POST DATA:');
+      post_sl:=TStringList.Create;
+      post_sl.LoadFromStream(postdata);
+      log.Lines.AddStrings(post_sl);
+      post_sl.Free;
+      log.Lines.Add('');
+
       response:=http.Post('https://'+config_host+uri, postdata);
     except
       on e:exception do
