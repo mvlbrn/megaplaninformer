@@ -7,7 +7,8 @@ uses
   Dialogs, IdCookieManager, IdBaseComponent, IdComponent, IdTCPConnection,
   IdTCPClient, IdHTTP, StdCtrls, ExtCtrls, IdIOHandler, IdIOHandlerSocket,
   IdIOHandlerStack, IdSSL, IdSSLOpenSSL, xmldom, XMLIntf, msxmldom, XMLDoc,
-  IdCoder, IdCoder3to4, IdCoderMIME, Grids, Menus, unit_messages, ImgList, IdMultipartFormData;
+  IdCoder, IdCoder3to4, IdCoderMIME, Grids, Menus, unit_messages, ImgList, IdMultipartFormData,
+  Vcl.Buttons;
 
 type
   Tmain = class(TForm)
@@ -28,6 +29,7 @@ type
     autoopen: TMenuItem;
     debug_results: TCheckBox;
     N2: TMenuItem;
+    BitBtn1: TBitBtn;
     procedure FormCreate(Sender: TObject);
     procedure messagesDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
@@ -47,6 +49,7 @@ type
     procedure N1Click(Sender: TObject);
     procedure autoopenClick(Sender: TObject);
     procedure N2Click(Sender: TObject);
+    procedure BitBtn1Click(Sender: TObject);
   private
     msg: TMessageHistory;
     function MegaplanSign(Method,ContentMD5,ContentType,Date,Host,Uri :string): string;
@@ -229,6 +232,7 @@ procedure Tmain.N1Click(Sender: TObject);
 var
     i:integer;
     data: TIdMultiPartFormDataStream;
+    get_str:string;
 begin
   if MessageDlg('Очистить все сообщения?', mtConfirmation , mbOKCancel, 0) <> mrOk then
   exit;
@@ -237,10 +241,16 @@ begin
   data := TIdMultiPartFormDataStream.Create();
 
   for i:=0 to msg.count-1 do
-    data.AddFormField('Ids['+inttostr(i)+']',IntToStr(msg.msg[i].id));
+  begin
+    //data.AddFormField('Ids['+inttostr(i)+']',IntToStr(msg.msg[i].id));
+    if i>0 then
+      get_str:=get_str+'&';
+    get_str:=get_str+'Ids%5B'+inttostr(i)+'%5D='+IntToStr(msg.msg[i].id);
+  end;
 
   //Parameters
-  MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
+  //MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
+  MegaplanGet('/BumsCommonApiV01/Informer/deactivateNotification.xml?'+get_str);
   data.free;
   MessagesRefresh;
 end;
@@ -366,7 +376,9 @@ begin
   debug('id='+inttostr(m.id));
   data := TIdMultiPartFormDataStream.Create();
   data.AddFormField('Ids[0]',IntToStr(m.id));
-  MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
+  //MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
+  MegaplanGet('/BumsCommonApiV01/Informer/deactivateNotification.xml?Ids%5B0%5D='+IntToStr(m.id));
+
   MessagesRefresh;
 end;
 
@@ -462,11 +474,11 @@ begin
   http := TIdHTTP.Create(nil);
   http.IOHandler := http_io;
 
-  //daterfc:= RFC2822Date(Now(), false);
-  //sign:=MegaplanSignDebug('POST', '', 'application/x-www-form-urlencoded', DateRFC, config_host,Uri);
-
-  daterfc:= 'Wed, 24 Jul 2013 12:59:45 +0700';
+  daterfc:= RFC2822Date(Now(), false);
   sign:=MegaplanSignDebug('POST', '', 'application/x-www-form-urlencoded', DateRFC, config_host,Uri);
+
+  //daterfc:= 'Wed, 24 Jul 2013 12:59:45 +0700';
+  //sign:=MegaplanSignDebug('POST', '', 'application/x-www-form-urlencoded', DateRFC, config_host,Uri);
 
   http.Request.CustomHeaders.Clear;
   http.Request.CustomHeaders.AddValue('Date', daterfc);
@@ -507,6 +519,17 @@ procedure Tmain.autoopenClick(Sender: TObject);
 begin
   autopopup := TMenuItem(Sender).Checked;
   regWriteBool('autopopup', TMenuItem(sender).Checked);
+end;
+
+procedure Tmain.BitBtn1Click(Sender: TObject);
+var
+    i:integer;
+    data: TIdMultiPartFormDataStream;
+begin
+  data := TIdMultiPartFormDataStream.Create();
+  data.AddFormField('Ids[0]', '-1');
+  MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
+  data.free;
 end;
 
 procedure Tmain.btn_refreshClick(Sender: TObject);

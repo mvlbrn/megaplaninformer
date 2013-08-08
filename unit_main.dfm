@@ -66,6 +66,15 @@ object main: Tmain
     Caption = 'Debug results'
     TabOrder = 3
   end
+  object BitBtn1: TBitBtn
+    Left = 89
+    Top = 364
+    Width = 75
+    Height = 25
+    Caption = 'BitBtn1'
+    TabOrder = 4
+    OnClick = BitBtn1Click
+  end
   object http: TIdHTTP
     IOHandler = ssl
     AllowCookies = True

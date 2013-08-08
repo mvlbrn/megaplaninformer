@@ -1,0 +1,3 @@
+[submodule "include/megaplandelphiapi"]
+	path = include/megaplandelphiapi
+	url = git@github.com:mvlbrn/megaplandelphiapi.git
