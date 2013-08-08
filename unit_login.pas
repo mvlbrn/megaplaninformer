@@ -30,7 +30,7 @@ var
   login: Tlogin;
 
 implementation
-uses unit_main, unit_utils;
+uses unit_main, unit_utils, megaplanapi;
 {$R *.dfm}
 
 procedure Tlogin.autoClick(Sender: TObject);
@@ -54,22 +54,12 @@ begin
   regWriteString('pass', config_userpassword);
   regWriteBool('auto', auto.Checked);
 
-  try
-    try
-      response:=main.http.Get('https://'+config_host+'/BumsCommonApiV01/User/authorize.xml?Login='+config_username+'&Password='+md5(config_userpassword));
-    except
-      On e: Exception do
-        response:='<?xml version="1.0" encoding="utf-8"?><response><status><code>fail</code><message>Ошибка при запросе: '+E.Message+'</message></status><data/></response>';
-    end;
-  finally
-    main.xml.LoadFromXML(response);
-  end;
+  Megaplan:=TMegaplanRequest.Create(config_host, 'https');
+  response:=Megaplan.Login(config_username, config_userpassword);
 
-  if main.xml.DocumentElement.ChildNodes['status'].ChildNodes['code'].text = 'ok' then
+  if response='ok' then
   begin
     main.log.Lines.Add('Успешно вошли в систему');
-    megaplan_access_id  := main.xml.DocumentElement.ChildNodes['data'].ChildNodes['access_id'].text;
-    megaplan_secret_key := main.xml.DocumentElement.ChildNodes['data'].ChildNodes['secret_key'].text;
     timerenabled := true;
     main.timer.Enabled:=timerenabled;
     main.timer.OnTimer(nil);
@@ -77,7 +67,7 @@ begin
   end
   else
   begin
-    MessageBox(Application.Handle, PWideChar(main.xml.DocumentElement.ChildNodes['status'].ChildNodes['message'].text), 'Ошибка', mb_Ok);
+    MessageBox(Application.Handle, PChar(response), 'Ошибка', mb_Ok);
     Application.Terminate;
   end;
 end;

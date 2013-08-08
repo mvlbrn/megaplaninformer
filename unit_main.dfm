@@ -66,49 +66,6 @@ object main: Tmain
     Caption = 'Debug results'
     TabOrder = 3
   end
-  object BitBtn1: TBitBtn
-    Left = 89
-    Top = 364
-    Width = 75
-    Height = 25
-    Caption = 'BitBtn1'
-    TabOrder = 4
-    OnClick = BitBtn1Click
-  end
-  object http: TIdHTTP
-    IOHandler = ssl
-    AllowCookies = True
-    ProxyParams.BasicAuthentication = False
-    ProxyParams.ProxyPort = 0
-    Request.CharSet = 'UTF-8'
-    Request.ContentLength = -1
-    Request.ContentRangeEnd = -1
-    Request.ContentRangeStart = -1
-    Request.ContentRangeInstanceLength = -1
-    Request.Accept = 'text/html, */*'
-    Request.BasicAuthentication = False
-    Request.UserAgent = 'Megainformer/0.1 (compatible; Indy Library)'
-    Request.Ranges.Units = 'bytes'
-    Request.Ranges = <>
-    HTTPOptions = [hoForceEncodeParams]
-    CookieManager = cookie
-    Left = 8
-    Top = 400
-  end
-  object cookie: TIdCookieManager
-    Left = 48
-    Top = 400
-  end
-  object ssl: TIdSSLIOHandlerSocketOpenSSL
-    MaxLineAction = maException
-    Port = 0
-    DefaultPort = 0
-    SSLOptions.Mode = sslmUnassigned
-    SSLOptions.VerifyMode = []
-    SSLOptions.VerifyDepth = 0
-    Left = 88
-    Top = 400
-  end
   object xml: TXMLDocument
     Options = [doNodeAutoCreate, doNodeAutoIndent, doAttrNull, doAutoPrefix, doNamespaceDecl]
     Left = 128

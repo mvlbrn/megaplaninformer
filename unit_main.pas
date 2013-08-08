@@ -4,18 +4,12 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, IdCookieManager, IdBaseComponent, IdComponent, IdTCPConnection,
-  IdTCPClient, IdHTTP, StdCtrls, ExtCtrls, IdIOHandler, IdIOHandlerSocket,
-  IdIOHandlerStack, IdSSL, IdSSLOpenSSL, xmldom, XMLIntf, msxmldom, XMLDoc,
-  IdCoder, IdCoder3to4, IdCoderMIME, Grids, Menus, unit_messages, ImgList, IdMultipartFormData,
-  Vcl.Buttons;
+  Dialogs, StdCtrls, ExtCtrls, xmldom, XMLIntf, msxmldom, XMLDoc,
+  Grids, Menus, unit_messages, ImgList, megaplanapi;
 
 type
   Tmain = class(TForm)
-    http: TIdHTTP;
-    cookie: TIdCookieManager;
     log: TMemo;
-    ssl: TIdSSLIOHandlerSocketOpenSSL;
     xml: TXMLDocument;
     messages: TStringGrid;
     tray: TTrayIcon;
@@ -29,7 +23,6 @@ type
     autoopen: TMenuItem;
     debug_results: TCheckBox;
     N2: TMenuItem;
-    BitBtn1: TBitBtn;
     procedure FormCreate(Sender: TObject);
     procedure messagesDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
@@ -49,13 +42,9 @@ type
     procedure N1Click(Sender: TObject);
     procedure autoopenClick(Sender: TObject);
     procedure N2Click(Sender: TObject);
-    procedure BitBtn1Click(Sender: TObject);
   private
     msg: TMessageHistory;
-    function MegaplanSign(Method,ContentMD5,ContentType,Date,Host,Uri :string): string;
-    function MegaplanSignDebug(Method,ContentMD5,ContentType,Date,Host,Uri:string): string;
     function MegaplanGet(Uri :string): string;
-    function MegaplanPost(Uri: string; PostData: TIdMultiPartFormDataStream): string;
     function MegaplanParseNotifications(xmlstr :string): string;
     function messageExist(id: string): integer;
     procedure mainshow();
@@ -72,6 +61,7 @@ type
 var
   main: Tmain;
 
+  Megaplan: TMegaplanRequest;
   config_url: string;
   config_username, config_userpassword, config_host: string;
 
@@ -83,7 +73,7 @@ var
 implementation
 
 uses IdHashMessageDigest, IdHeaderList, IdDateTimeStamp, MSXML, unit_utils, IdHMACSHA1, IdGlobal,
-  unit_login, ShellAPI, System.Types, System.UITypes;
+  unit_login, ShellAPI, System.Types, System.UITypes, synachar;
 
 {$R *.dfm}
 
@@ -224,34 +214,27 @@ procedure Tmain.MessagesRefresh;
 begin
   if enabled then
   begin
-    MegaplanParseNotifications(MegaplanGet('/BumsCommonApiV01/Informer/notifications.xml'));
+    MegaplanParseNotifications(CharsetConversion(MegaplanGet('/BumsCommonApiV01/Informer/notifications.xml'),UTF_8,CP1251));
   end;
 end;
 
 procedure Tmain.N1Click(Sender: TObject);
 var
     i:integer;
-    data: TIdMultiPartFormDataStream;
     get_str:string;
 begin
   if MessageDlg('Очистить все сообщения?', mtConfirmation , mbOKCancel, 0) <> mrOk then
   exit;
 
-  //Crete post array
-  data := TIdMultiPartFormDataStream.Create();
-
   for i:=0 to msg.count-1 do
   begin
-    //data.AddFormField('Ids['+inttostr(i)+']',IntToStr(msg.msg[i].id));
     if i>0 then
       get_str:=get_str+'&';
     get_str:=get_str+'Ids%5B'+inttostr(i)+'%5D='+IntToStr(msg.msg[i].id);
   end;
 
   //Parameters
-  //MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
   MegaplanGet('/BumsCommonApiV01/Informer/deactivateNotification.xml?'+get_str);
-  data.free;
   MessagesRefresh;
 end;
 
@@ -319,43 +302,10 @@ begin
   SetForegroundWindow(Main.Handle);
 end;
 
-function Tmain.MegaplanSign(Method,ContentMD5,ContentType,Date,Host,Uri:string): string;
-var str: string;
-  hash: TIdBytes;
-
-begin
-  str:=Method+#10+ContentMD5+#10+ContentType+#10+Date+#10+Host+Uri;
-  with TIdHMACSHA1.Create do
-  try
-    Key := toBytes(megaplan_secret_key);
-    hash := HashValue(toBytes(str));
-  finally
-    Free;
-  end;
-  result:=TIdEncoderMIME.EncodeBytes(toBytes(bintostr(hash)));
-end;
-
-function Tmain.MegaplanSignDebug(Method,ContentMD5,ContentType,Date,Host,Uri:string): string;
-var str: string;
-  hash: TIdBytes;
-
-begin
-  str:=Method+#10+ContentMD5+#10+ContentType+#10+''+#10+Host+Uri;
-  with TIdHMACSHA1.Create do
-  try
-    Key := toBytes(megaplan_secret_key);
-    hash := HashValue(toBytes(str));
-  finally
-    Free;
-  end;
-  result:=TIdEncoderMIME.EncodeBytes(toBytes(bintostr(hash)));
-end;
-
 procedure Tmain.MenuItem1Click(Sender: TObject);
 var m: PMessage;
     id:integer;
     error: boolean;
-    data: TIdMultiPartFormDataStream;
 begin
   id := -1;
   debug('Cell='+messages.Cells[messages.Col, messages.Row]);
@@ -374,29 +324,14 @@ begin
 
   //Parameters
   debug('id='+inttostr(m.id));
-  data := TIdMultiPartFormDataStream.Create();
-  data.AddFormField('Ids[0]',IntToStr(m.id));
-  //MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
   MegaplanGet('/BumsCommonApiV01/Informer/deactivateNotification.xml?Ids%5B0%5D='+IntToStr(m.id));
-
   MessagesRefresh;
 end;
 
 function Tmain.MegaplanGet(Uri :string): string;
-var DateRFC: string;
-    sign:string;
-    response:string;
 begin
-  daterfc:= RFC2822Date(Now(), false);
-  sign:=MegaplanSign('GET', '', '', DateRFC, config_host, Uri);
-
-  http.Request.CustomHeaders.Clear;
-  http.Request.CustomHeaders.AddValue('Date', daterfc);
-  http.Request.CustomHeaders.AddValue('Accept', 'application/json');
-  http.Request.CustomHeaders.AddValue('X-Authorization', megaplan_access_id+':'+sign);
-
   try
-    response:=http.Get('https://'+config_host+uri);
+    result:=Megaplan.Get(uri);
   except
     on e:exception do
     begin
@@ -404,11 +339,9 @@ begin
       _offline;
     end;
   end;
-  MegaplanGet:=response;
-  if (length(response)>0) then
+  if (length(result)>0) then
     _online;
-
-    if debug_results.Checked then debug('got: '+response);
+  if debug_results.Checked then debug('got: '+result);
 end;
 
 procedure RemoveRowStringGrid(var StringGrid: TStringGrid; Which: integer);
@@ -462,74 +395,11 @@ begin
   messages.Update;
 end;
 
-function Tmain.MegaplanPost(Uri: string; PostData: TIdMultiPartFormDataStream): string;
-var
-  DateRFC: string;
-  sign, response: string;
-  http: TIdHTTP;
-  http_io: TIdSSLIOHandlerSocketOpenSSL;
-  post_sl :TStringList;
-begin
-  http_io := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
-  http := TIdHTTP.Create(nil);
-  http.IOHandler := http_io;
-
-  daterfc:= RFC2822Date(Now(), false);
-  sign:=MegaplanSignDebug('POST', '', 'application/x-www-form-urlencoded', DateRFC, config_host,Uri);
-
-  //daterfc:= 'Wed, 24 Jul 2013 12:59:45 +0700';
-  //sign:=MegaplanSignDebug('POST', '', 'application/x-www-form-urlencoded', DateRFC, config_host,Uri);
-
-  http.Request.CustomHeaders.Clear;
-  http.Request.CustomHeaders.AddValue('Date', daterfc);
-  http.Request.CustomHeaders.AddValue('Accept', 'application/json');
-  http.Request.CustomHeaders.AddValue('X-Authorization', megaplan_access_id+':'+sign);
-  http.Request.CustomHeaders.AddValue('Content-Type', 'application/x-www-form-urlencoded');
-
-  try
-    try
-      log.Lines.Add('POST HEADERS:');
-      log.Lines.AddStrings(http.Request.CustomHeaders);
-      log.Lines.Add('POST DATA:');
-      post_sl:=TStringList.Create;
-      post_sl.LoadFromStream(postdata);
-      log.Lines.AddStrings(post_sl);
-      post_sl.Free;
-      log.Lines.Add('');
-
-      response:=http.Post('https://'+config_host+uri, postdata);
-    except
-      on e:exception do
-      begin
-        debug(e.message);
-        _offline;
-      end;
-    end;
-  finally
-    if assigned(http) then http.Free;
-    if assigned(http_io) then http_io.Free;
-  end;
-  if (length(response)>0) then
-    _online;
-
-  if debug_results.Checked then debug(response);
-end;
 
 procedure Tmain.autoopenClick(Sender: TObject);
 begin
   autopopup := TMenuItem(Sender).Checked;
   regWriteBool('autopopup', TMenuItem(sender).Checked);
-end;
-
-procedure Tmain.BitBtn1Click(Sender: TObject);
-var
-    i:integer;
-    data: TIdMultiPartFormDataStream;
-begin
-  data := TIdMultiPartFormDataStream.Create();
-  data.AddFormField('Ids[0]', '-1');
-  MegaplanPost('/BumsCommonApiV01/Informer/deactivateNotification.xml', data);
-  data.free;
 end;
 
 procedure Tmain.btn_refreshClick(Sender: TObject);

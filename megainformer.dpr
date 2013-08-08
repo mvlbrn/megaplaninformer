@@ -5,7 +5,8 @@ uses
   unit_main in 'unit_main.pas' {main},
   unit_utils in 'unit_utils.pas',
   unit_login in 'unit_login.pas' {login},
-  unit_messages in 'unit_messages.pas';
+  unit_messages in 'unit_messages.pas',
+  megaplanapi in 'include\megaplandelphiapi\megaplanapi.pas';
 
 {$R *.res}
 
